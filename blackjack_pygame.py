@@ -25,6 +25,109 @@ def end_text_objects(text, font, color):
     return textSurface, textSurface.get_rect()
 
 
+def game_texts(text, x, y):
+    TextSurf, TextRect = text_objects(text, textfont)
+    TextRect.center = (x, y)
+    gameDisplay.blit(TextSurf, TextRect)
+    pygame.display.update()
+
+
+def game_finish(text, x, y, color):
+    TextSurf, TextRect = end_text_objects(text, game_end, color)
+    TextRect.center = (x, y)
+    gameDisplay.blit(TextSurf, TextRect)
+    pygame.display.update()
+
+
+def black_jack(text, x, y, color):
+    TextSurf, TextRect = end_text_objects(text, blackjack, color)
+    TextRect.center = (x, y)
+    gameDisplay.blit(TextSurf, TextRect)
+    pygame.display.update()
+
+
+def button(msg, x, y, w, h, ic, ac, action=None):
+    mouse = pygame.mouse.get_pos()
+    click = pygame.mouse.get_pressed()
+
+    if x + w > mouse[0] > x and y + h > mouse[1] > y:
+        pygame.draw.rect(gameDisplay, ac, (x, y, w, h))
+        if click[0] == 1 and action != None:
+            action()
+    else:
+        pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
+
+    TextSurf, TextRect = text_objects(msg, font)
+    TextRect.center = ((x + (w / 2)), (y + (h / 2)))
+    gameDisplay.blit(TextSurf, TextRect)
+
+
+class Play:
+    def __init__(self):
+        self.player_card = None
+        self.deck - Deck()
+        self.dealer = Hand()
+        self.player = Hand()
+        self.deck.shuffle()
+
+    def blackjack(self):
+        self.dealer.calc_hand()
+        self.player.calc_hand()
+        show_dealer_card = pygame.image.load(
+            "./assets/images/" + self.dealer.card_img[1] + ".png"
+        ).convert()
+
+        if self.player.value == 21 and self.dealer.value == 21:
+            gameDisplay.blit(show_dealer_card, (550, 200))
+            black_jack("Both Blackjack", 500, 250, gray)
+            time.sleep(4)
+            self.play_or_exit()
+        elif self.player.value == 21:
+            gameDisplay.blit(show_dealer_card, (550, 200))
+            black_jack("Player Blackjack", 500, 250, gray)
+            time.sleep(4)
+            self.play_or_exit()
+        elif self.dealer.value == 21:
+            gameDisplay.blit(show_dealer_card, (550, 200))
+            black_jack("Dealer Blackjack", 500, 250, gray)
+            time.sleep(4)
+            self.play_or_exit()
+
+        self.player.value = 0
+        self.dealer.value = 0
+
+    def deal(self):
+        for i in range(2):
+            self.player.add_card(self.deck.deal())
+            self.dealer.add_card(self.deck.deal())
+
+        self.dealer.display_cards()
+        self.player.display_cards()
+        self.player_card = 1
+
+        dealer_card = pygame.image.load(
+            "./assets/images/" + self.dealer.card_img[0] + ".png"
+        ).convert()
+        dealer_card_2 = pygame.image.load("./assets/images/back.png").convert()
+
+        player_card_1 = pygame.image.load(
+            "./assets/images/" + self.player.card_img[0] + ".png"
+        ).convert()
+        player_card_2 = pygame.image.load(
+            "./assets/images/" + self.player.card_img[1] + ".png"
+        ).convert()
+
+        game_texts("Dealer's hand is: ", 500, 150)
+        gameDisplay.blit(dealer_card, (400, 200))
+        gameDisplay.blit(dealer_card_2, (550, 200))
+
+        game_texts("Player's hand is: ", 500, 400)
+
+        gameDisplay.blit(player_card_1, (300, 450))
+        gameDisplay.blit(player_card_2, (410, 450))
+        self.blackjack()
+
+
 play_blackjack = Play()
 running = True
 
