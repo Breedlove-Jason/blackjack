@@ -64,8 +64,9 @@ def button(msg, x, y, w, h, ic, ac, action=None):
 
 class Play:
     def __init__(self):
+        self.deck = None
         self.player_card = None
-        self.deck - Deck()
+        self.deck = Deck()
         self.dealer = Hand()
         self.player = Hand()
         self.deck.shuffle()
@@ -126,6 +127,54 @@ class Play:
         gameDisplay.blit(player_card_1, (300, 450))
         gameDisplay.blit(player_card_2, (410, 450))
         self.blackjack()
+
+    def hit(self):
+        self.player.add_card(self.deck.deal())
+        self.blackjack()
+        self.player_card += 1
+
+        if self.player_card == 2:
+            self.player.calc_hand()
+            self.player.display_cards()
+            player_card_3 = pygame.image.load(
+                "./assets/images/" + self.player.card_img[2] + ".png"
+            ).convert()
+            gameDisplay.blit(player_card_3, (520, 450))
+
+        if self.player_card == 3:
+            self.player.calc_hand()
+            self.player.display_cards()
+            player_card_4 = pygame.image.load(
+                "./assets/images/" + self.player.card_img[3] + ".png"
+            ).convert()
+            gameDisplay.blit(player_card_4, (630, 450))
+
+        if self.player.value > 21:
+            show_dealer_card = pygame.image.load(
+                "./assets/images/" + self.dealer.card_img[1] + ".png"
+            ).convert()
+            gameDisplay.blit(show_dealer_card, (500, 250))
+            game_finish("Player Bust", 500, 350, red)
+            time.sleep(4)
+            self.play_or_exit()
+
+            self.player.value = 0
+
+            if self.player_card > 4:
+                sys.exit()
+
+    def play_or_exit(self):
+        game_texts("Play Again?", 200, 80)
+        time.sleep(3)
+        self.player.value = 0
+        self.dealer.value = 0
+        self.deck = Deck()
+        self.dealer = Hand()
+        self.player = Hand()
+        self.deck.shuffle()
+        gameDisplay.fill(background_color)
+        pygame.draw.rect(gameDisplay, gray, pygame.Rect(0, 0, 250, 700))
+        pygame.display.update()
 
 
 play_blackjack = Play()

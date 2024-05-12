@@ -16,7 +16,7 @@ pygame.init()
 font = pygame.font.SysFont("Arial", 20)
 textfont = ("Comic Sans MS", 25)
 game_end = pygame.font.SysFont("dejavusans", 100)
-blackjack = pygame.font.Sysfont("Roboto", 70)
+blackjack = pygame.font.SysFont("Roboto", 70)
 SUITS = ["H", "D", "C", "S"]
 RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
 
