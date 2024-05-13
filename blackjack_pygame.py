@@ -1,192 +1,170 @@
-import pygame as pygame
-from blackjack_deck import *
-from constants import *
+import pygame
 import sys
 import time
-
-pygame.init()
-
-clock = pygame.time.Clock()
-
-gameDisplay = pygame.display.set_mode((display_width, display_height))
-
-pygame.display.set_caption("Blackjack")
-gameDisplay.fill(background_color)
-pygame.draw.rect(gameDisplay, gray, pygame.Rect(0, 0, 250, 700))
+from constants import *
+from blackjack_deck import Deck, Hand
 
 
-def text_objects(text, font):
-    textSurface = font.render(text, True, black)
-    return textSurface, textSurface.get_rect()
+def text_objects(text, font, color=BLACK):
+    """Render text as a surface object."""
+    text_surface = font.render(text, True, color)
+    return text_surface, text_surface.get_rect()
 
 
-def end_text_objects(text, font, color):
-    textSurface = font.render(text, True, color)
-    return textSurface, textSurface.get_rect()
+def draw_text(screen, text, font, x, y, color=BLACK):
+    """Draw text centered at (x, y) on the given screen."""
+    text_surf, text_rect = text_objects(text, font, color)
+    text_rect.center = (x, y)
+    screen.blit(text_surf, text_rect)
 
 
-def game_texts(text, x, y):
-    TextSurf, TextRect = text_objects(text, textfont)
-    TextRect.center = (x, y)
-    gameDisplay.blit(TextSurf, TextRect)
-    pygame.display.update()
-
-
-def game_finish(text, x, y, color):
-    TextSurf, TextRect = end_text_objects(text, game_end, color)
-    TextRect.center = (x, y)
-    gameDisplay.blit(TextSurf, TextRect)
-    pygame.display.update()
-
-
-def black_jack(text, x, y, color):
-    TextSurf, TextRect = end_text_objects(text, blackjack, color)
-    TextRect.center = (x, y)
-    gameDisplay.blit(TextSurf, TextRect)
-    pygame.display.update()
-
-
-def button(msg, x, y, w, h, ic, ac, action=None):
+def button(screen, msg, x, y, w, h, ic, ac, action=None):
+    """Create a clickable button with a message."""
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
 
-    if x + w > mouse[0] > x and y + h > mouse[1] > y:
-        pygame.draw.rect(gameDisplay, ac, (x, y, w, h))
-        if click[0] == 1 and action != None:
-            action()
-    else:
-        pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
+    color = ac if x + w > mouse[0] > x and y + h > mouse[1] > y else ic
+    pygame.draw.rect(screen, color, (x, y, w, h))
 
-    TextSurf, TextRect = text_objects(msg, font)
-    TextRect.center = ((x + (w / 2)), (y + (h / 2)))
-    gameDisplay.blit(TextSurf, TextRect)
+    text_surf, text_rect = text_objects(msg, FONT)
+    text_rect.center = ((x + (w / 2)), (y + (h / 2)))
+    screen.blit(text_surf, text_rect)
+
+    if click[0] == 1 and action:
+        action()
 
 
-class Play:
+class BlackjackGame:
     def __init__(self):
-        self.deck = None
-        self.player_card = None
+        """Initialize the Blackjack game components."""
         self.deck = Deck()
+        self.deck.shuffle()
         self.dealer = Hand()
         self.player = Hand()
-        self.deck.shuffle()
+        self.player_card_count = 0
+        self.running = True
 
-    def blackjack(self):
-        self.dealer.calc_hand()
-        self.player.calc_hand()
-        show_dealer_card = pygame.image.load(
-            "./assets/images/" + self.dealer.card_img[1] + ".png"
-        ).convert()
+        # Setup Pygame display
+        self.screen = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
+        pygame.display.set_caption("Blackjack")
+        self.reset_display()
 
-        if self.player.value == 21 and self.dealer.value == 21:
-            gameDisplay.blit(show_dealer_card, (550, 200))
-            black_jack("Both Blackjack", 500, 250, gray)
-            time.sleep(4)
-            self.play_or_exit()
-        elif self.player.value == 21:
-            gameDisplay.blit(show_dealer_card, (550, 200))
-            black_jack("Player Blackjack", 500, 250, gray)
-            time.sleep(4)
-            self.play_or_exit()
-        elif self.dealer.value == 21:
-            gameDisplay.blit(show_dealer_card, (550, 200))
-            black_jack("Dealer Blackjack", 500, 250, gray)
-            time.sleep(4)
-            self.play_or_exit()
+    def reset_display(self):
+        """Reset the main display and background."""
+        self.screen.fill(BACKGROUND_COLOR)
+        pygame.draw.rect(self.screen, GRAY, pygame.Rect(0, 0, 250, 700))
 
-        self.player.value = 0
-        self.dealer.value = 0
+    def play(self):
+        """Main game loop."""
+        while self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+
+            button(self.screen, "Deal", 30, 100, 150, 50, LIGHT_SLATE, DARK_SLATE, self.deal)
+            button(self.screen, "Hit", 30, 200, 150, 50, LIGHT_SLATE, DARK_SLATE, self.hit)
+            button(self.screen, "Stand", 30, 300, 150, 50, LIGHT_SLATE, DARK_SLATE, self.stand)
+            button(self.screen, "EXIT", 30, 500, 150, 50, LIGHT_SLATE, DARK_RED, self.exit_game)
+
+            pygame.display.flip()
+
+    def exit_game(self):
+        """Exit the game."""
+        pygame.quit()
+        sys.exit()
 
     def deal(self):
-        for i in range(2):
+        """Deal initial hands to the player and dealer."""
+        self.player = Hand()
+        self.dealer = Hand()
+        self.deck.shuffle()
+        for _ in range(2):
             self.player.add_card(self.deck.deal())
             self.dealer.add_card(self.deck.deal())
+        self.player_card_count = 2
 
-        self.dealer.display_cards()
-        self.player.display_cards()
-        self.player_card = 1
-
-        dealer_card = pygame.image.load(
-            "./assets/images/" + self.dealer.card_img[0] + ".png"
-        ).convert()
-        dealer_card_2 = pygame.image.load("./assets/images/back.png").convert()
-
-        player_card_1 = pygame.image.load(
-            "./assets/images/" + self.player.card_img[0] + ".png"
-        ).convert()
-        player_card_2 = pygame.image.load(
-            "./assets/images/" + self.player.card_img[1] + ".png"
-        ).convert()
-
-        game_texts("Dealer's hand is: ", 500, 150)
-        gameDisplay.blit(dealer_card, (400, 200))
-        gameDisplay.blit(dealer_card_2, (550, 200))
-
-        game_texts("Player's hand is: ", 500, 400)
-
-        gameDisplay.blit(player_card_1, (300, 450))
-        gameDisplay.blit(player_card_2, (410, 450))
-        self.blackjack()
+        self.show_hands()
+        self.check_blackjack()
 
     def hit(self):
+        """Give the player one more card."""
         self.player.add_card(self.deck.deal())
-        self.blackjack()
-        self.player_card += 1
+        self.player_card_count += 1
 
-        if self.player_card == 2:
-            self.player.calc_hand()
-            self.player.display_cards()
-            player_card_3 = pygame.image.load(
-                "./assets/images/" + self.player.card_img[2] + ".png"
-            ).convert()
-            gameDisplay.blit(player_card_3, (520, 450))
+        if self.player_card_count > 4:
+            return
 
-        if self.player_card == 3:
-            self.player.calc_hand()
-            self.player.display_cards()
-            player_card_4 = pygame.image.load(
-                "./assets/images/" + self.player.card_img[3] + ".png"
-            ).convert()
-            gameDisplay.blit(player_card_4, (630, 450))
+        self.show_hands()
+        self.check_blackjack()
 
         if self.player.value > 21:
-            show_dealer_card = pygame.image.load(
-                "./assets/images/" + self.dealer.card_img[1] + ".png"
-            ).convert()
-            gameDisplay.blit(show_dealer_card, (500, 250))
-            game_finish("Player Bust", 500, 350, red)
+            self.show_dealer_hand()
+            draw_text(self.screen, "Player Bust", GAME_END_FONT, 500, 350, RED)
             time.sleep(4)
-            self.play_or_exit()
+            self.reset_display()
 
-            self.player.value = 0
+    def stand(self):
+        """Finalize the dealer's hand and compare with the player."""
+        while self.dealer.value < 17:
+            self.dealer.add_card(self.deck.deal())
+            self.dealer.calc_hand()
 
-            if self.player_card > 4:
-                sys.exit()
+        self.show_hands(final=True)
 
-    def play_or_exit(self):
-        game_texts("Play Again?", 200, 80)
-        time.sleep(3)
-        self.player.value = 0
-        self.dealer.value = 0
-        self.deck = Deck()
-        self.dealer = Hand()
-        self.player = Hand()
-        self.deck.shuffle()
-        gameDisplay.fill(background_color)
-        pygame.draw.rect(gameDisplay, gray, pygame.Rect(0, 0, 250, 700))
-        pygame.display.update()
+        if self.dealer.value > 21 or self.player.value > self.dealer.value:
+            message = "Player Wins!"
+        elif self.player.value < self.dealer.value:
+            message = "Dealer Wins!"
+        else:
+            message = "It's a Tie!"
+
+        draw_text(self.screen, message, GAME_END_FONT, 500, 350, GREEN if "Wins" in message else BLACK)
+        time.sleep(4)
+        self.reset_display()
+
+    def check_blackjack(self):
+        """Check for Blackjack conditions and handle accordingly."""
+        self.player.calc_hand()
+        self.dealer.calc_hand()
+        dealer_faceup_card = "./assets/images/" + self.dealer.card_img[1] + ".png"
+
+        if self.player.value == 21 and self.dealer.value == 21:
+            draw_text(self.screen, "Both Blackjack", BLACKJACK_FONT, 500, 250, GRAY)
+        elif self.player.value == 21:
+            draw_text(self.screen, "Player Blackjack", BLACKJACK_FONT, 500, 250, GRAY)
+        elif self.dealer.value == 21:
+            draw_text(self.screen, "Dealer Blackjack", BLACKJACK_FONT, 500, 250, GRAY)
+        else:
+            return
+
+        time.sleep(4)
+        self.reset_display()
+
+    def show_hands(self, final=False):
+        """Show the player's and dealer's hands on the screen."""
+        self.player.calc_hand()
+        self.dealer.calc_hand()
+        self.player.display_cards()
+        self.dealer.display_cards()
+
+        # Dealer's cards
+        draw_text(self.screen, "Dealer's hand:", TEXT_FONT, 500, 150)
+        dealer_card_1 = pygame.image.load("./assets/images/" + self.dealer.card_img[0] + ".png").convert()
+        dealer_card_2 = pygame.image.load("./assets/images/back.png").convert() if not final else pygame.image.load("./assets/images/" + self.dealer.card_img[1] + ".png").convert()
+        self.screen.blit(dealer_card_1, (400, 200))
+        self.screen.blit(dealer_card_2, (550, 200))
+
+        # Player's cards
+        draw_text(self.screen, "Player's hand:", TEXT_FONT, 500, 450)
+        x_offset = 400
+        for img_name in self.player.card_img:
+            card_img = pygame.image.load("./assets/images/" + img_name + ".png").convert()
+            self.screen.blit(card_img, (x_offset, 500))
+            x_offset += 150
+
+        pygame.display.flip()
 
 
-play_blackjack = Play()
-running = True
-
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        button("Deal", 30, 100, 150, 50, light_slat, dark_slat, play_blackjack.deal)
-        button("Hit", 30, 200, 150, 50, light_slat, dark_slat, play_blackjack.hit)
-        button("Stand", 30, 300, 150, 50, light_slat, dark_slat, play_blackjack.stand)
-        button("EXIT", 30, 500, 150, 50, light_slat, dark_red, play_blackjack.exit)
-
-    pygame.display.flip()
+if __name__ == "__main__":
+    game = BlackjackGame()
+    game.play()

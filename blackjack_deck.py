@@ -1,53 +1,52 @@
 import random
-from constants import *
-
+from constants import SUITS, RANKS
 
 class Deck:
     def __init__(self):
+        """Initialize a deck with cards and build it."""
         self.cards = []
         self.build()
 
     def build(self):
+        """Build a standard deck of 52 cards."""
         for value in RANKS:
             for suit in SUITS:
                 self.cards.append((value, suit))
 
     def shuffle(self):
+        """Shuffle the deck."""
         random.shuffle(self.cards)
 
     def deal(self):
-        if len(self.cards) > 1:
-            return self.cards.pop(0)
+        """Deal one card from the deck. Returns None if the deck is empty."""
+        return self.cards.pop(0) if len(self.cards) > 0 else None
 
 
-class Hand(Deck):
+class Hand:
     def __init__(self):
-        super().__init__()
+        """Initialize a hand with an empty set of cards and reset the score."""
         self.cards = []
         self.card_img = []
         self.value = 0
 
     def add_card(self, card):
-        self.cards.append(card)
+        """Add a card to the hand."""
+        if card:
+            self.cards.append(card)
 
     def calc_hand(self):
-        first_card_index = [a_card[0] for a_card in self.cards]
-        non_aces = [c for c in first_card_index if c != "A"]
-        aces = [c for c in first_card_index if c == "A"]
+        """Calculate the score of the hand according to Blackjack rules."""
+        self.value = 0
+        non_aces = [card for card in self.cards if card[0] != "A"]
+        aces = [card for card in self.cards if card[0] == "A"]
 
         for card in non_aces:
-            if card in "JQK":
-                self.value += 10
-            else:
-                self.value += int(card)
+            rank = card[0]
+            self.value += 10 if rank in "JQK" else int(rank)
 
-        for card in aces:
-            if self.value <= 10:
-                self.value += 11
-            else:
-                self.value += 1
+        for ace in aces:
+            self.value += 11 if self.value <= 10 else 1
 
     def display_cards(self):
-        for card in self.cards:
-            cards = "".join((card[0], card[1]))
-            self.card_img.append(cards)
+        """Convert cards into image names (without file extensions)."""
+        self.card_img = ["".join(card) for card in self.cards]
