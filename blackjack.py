@@ -89,7 +89,6 @@ class Hand:
         while self.value > 21 and aces:
             self.value -= 10
             aces -= 1
-        print(f'Player Hand {self.value}')
 
     def win_condition(self, other_hand):
         if self.value > 21:
@@ -111,39 +110,37 @@ class Hand:
 
 
 # Helper Functions
-def text_objects(text, font):
+def text_objects(text, font, color):
     """
     Creates a text surface and its rect.
     """
-    text_surface = font.render(text, True, BLACK)
-    return text_surface, text_surface.get_rect()
-
-
-def end_text_objects(text, font, color):
-    """
-    Creates an end game text surface and its rect.
-    """
     text_surface = font.render(text, True, color)
     return text_surface, text_surface.get_rect()
+
+
+def display_text(screen, text, font, x, y, color):
+    """
+    Displays text on the screen.
+    """
+    text_surf, text_rect = text_objects(text, font, color)
+    text_rect.center = (x, y)
+    screen.blit(text_surf, text_rect)
 
 
 def game_texts(screen, text, x, y):
     """
     Displays game text on the screen.
     """
-    text_surf, text_rect = text_objects(text, textfont)
-    text_rect.center = (x, y)
-    screen.blit(text_surf, text_rect)
+    display_text(screen, text, textfont, x, y, BLACK)
 
 
 def game_finish(screen, text, x, y, color):
     """
     Displays game finish text on the screen.
     """
-    text_surf, text_rect = end_text_objects(text, game_end, color)
-    text_rect.center = (x, y)
-    screen.blit(text_surf, text_rect)
-    pygame.display.update()
+    display_text(screen, text, game_end, x, y, color)
+    pygame.display.flip()
+    time.sleep(4)  # Delay to make the result visible
 
 
 def display_card(screen, card, x, y):
@@ -155,28 +152,42 @@ def display_card(screen, card, x, y):
     screen.blit(card_img, (x, y))
 
 
+def deal_card(deck, hand):
+    """
+    Deals a card to a hand.
+    """
+    hand.add_card(deck.deal())
+
+
+def handle_events():
+    global game_state
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_p:
+                game_state = 'play'
+            if event.key == pygame.K_q:
+                pygame.quit()
+                sys.exit()
+            if event.key == pygame.K_c:
+                game_state = 'play'
+
+
 # Game Functions
 def game_intro():
     """
     Displays the game intro screen.
     """
-    intro = True
-    while intro:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_c:
-                    intro = False
-                if event.key == pygame.K_q:
-                    pygame.quit()
-                    sys.exit()
+    global game_state
+    while game_state == 'intro':
+        handle_events()
 
         screen.fill(BACKGROUND_COLOR)
         game_texts(screen, "Welcome to Blackjack!", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 4)
         game_texts(screen, "Press 'C' to play or 'Q' to quit", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 2)
-        pygame.display.update()
+        pygame.display.flip()
         clock.tick(15)
 
 
@@ -184,25 +195,17 @@ def game_loop():
     """
     Main game loop for blackjack.
     """
+    global game_state
     deck = Deck()
     deck.shuffle()
 
     player_hand = Hand()
     dealer_hand = Hand()
 
-    for _ in range(2):
-        player_hand.add_card(deck.deal())
-        dealer_hand.add_card(deck.deal())
+    deal(deck, player_hand, dealer_hand)
 
-    game = True
-    player_bust = False
-
-    while game:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            # Event handling for buttons should go here.
+    while game_state == 'play':
+        handle_events()
 
         screen.fill(BACKGROUND_COLOR)
 
@@ -231,14 +234,26 @@ def game_loop():
 
         if player_hand.value > 21:
             player_bust = True
-            game = False
+            game_state = 'end'
+            game_finish(screen, "Player Busts! Dealer Wins!", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 2, RED)
+        elif dealer_hand.value > 21:
+            game_state = 'end'
+            game_finish(screen, "Dealer Busts! Player Wins!", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 2, GREEN)
 
-    if player_bust:
-        game_finish(screen, "Player Busts! Dealer Wins!", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 2, RED)
-    else:
-        game_finish(screen, "Player Wins!", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 2, GREEN)
 
-    game_over_screen()
+def game_over_screen():
+    """
+    Displays the game over screen with options to play again or quit.
+    """
+    global game_state
+    while game_state == 'end':
+        handle_events()
+
+        screen.fill(BACKGROUND_COLOR)
+        game_texts(screen, "Game Over", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 4)
+        game_texts(screen, "Press 'P' to play again or 'Q' to quit", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 2)
+        pygame.display.flip()
+        clock.tick(15)
 
 
 # Helper functions for button interactions
@@ -246,17 +261,22 @@ def deal(deck, player_hand, dealer_hand):
     player_hand.cards.clear()
     dealer_hand.cards.clear()
     for _ in range(2):
-        player_hand.add_card(deck.deal())
-        dealer_hand.add_card(deck.deal())
+        deal_card(deck, player_hand)
+        deal_card(deck, dealer_hand)
+    player_hand.calc_value()
+    dealer_hand.calc_value()
 
 
 def hit(deck, hand):
-    hand.add_card(deck.deal())
+    if len(hand.cards) < 5:
+        deal_card(deck, hand)
+        hand.calc_value()
 
 
 def stand(deck, player_hand, dealer_hand):
     while dealer_hand.value < 17:
-        hit(deck, dealer_hand)
+        deal_card(deck, dealer_hand)
+        dealer_hand.calc_value()
 
     check_win(player_hand, dealer_hand)
 
@@ -264,6 +284,8 @@ def stand(deck, player_hand, dealer_hand):
 def check_win(player_hand, dealer_hand):
     result = player_hand.win_condition(dealer_hand)
     game_finish(screen, result, DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 2, GREEN if "Wins" in result else BLACK)
+    global game_state
+    game_state = 'end'
 
 
 def draw_button(text, x, y, width, height, inactive_color, active_color, action):
@@ -273,33 +295,10 @@ def draw_button(text, x, y, width, height, inactive_color, active_color, action)
         pygame.draw.rect(screen, active_color, (x, y, width, height))
         if click[0] == 1:
             action()
+            pygame.event.clear(pygame.MOUSEBUTTONDOWN)  # Clear the button press event
     else:
         pygame.draw.rect(screen, inactive_color, (x, y, width, height))
     game_texts(screen, text, x + width / 2, y + height / 2)
-
-
-def game_over_screen():
-    """
-    Displays the game over screen with options to play again or quit.
-    """
-    over = True
-    while over:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p:
-                    over = False
-                if event.key == pygame.K_q:
-                    pygame.quit()
-                    sys.exit()
-
-        screen.fill(BACKGROUND_COLOR)
-        game_texts(screen, "Game Over", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 4)
-        game_texts(screen, "Press 'P' to play again or 'Q' to quit", DISPLAY_WIDTH // 2, DISPLAY_HEIGHT // 2)
-        pygame.display.update()
-        clock.tick(15)
 
 
 # Main Code
@@ -307,9 +306,15 @@ screen = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
 pygame.display.set_caption("Blackjack")
 clock = pygame.time.Clock()
 
-game_intro()
+game_state = 'intro'  # Define game_state before calling game_intro
+
 while True:
-    game_loop()
+    if game_state == 'intro':
+        game_intro()
+    elif game_state == 'play':
+        game_loop()
+    elif game_state == 'end':
+        game_over_screen()
 
 pygame.quit()
 sys.exit()
