@@ -1,0 +1,1 @@
+{"name":"blackjack-arcade","private":true,"type":"module","scripts":{"build":"node build.mjs","test":"python3 -m unittest discover -s tests -v"}}
